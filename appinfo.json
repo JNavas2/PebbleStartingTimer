@@ -1,0 +1,32 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "John Navas",
+    "longName": "Yacht Race Starting Timer",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/Yacht-Racing-Start-Timer-Icon-28.png",
+                "menuIcon": true,
+                "name": "APP_ICON_28",
+                "targetPlatforms": [
+                    "basalt"
+                ],
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "StartingTimer",
+    "targetPlatforms": [
+        "basalt"
+    ],
+    "uuid": "45b5631f-f23f-4462-b5e3-dd61664a3a06",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
