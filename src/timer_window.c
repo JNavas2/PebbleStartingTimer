@@ -28,7 +28,7 @@ static void initialise_ui(void) {
   s_res_gothic_18_bold = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   // s_clock_layer
   s_clock_layer = text_layer_create(GRect(8, 9, 130, 31));
-  text_layer_set_text(s_clock_layer, "00:00:00");
+  text_layer_set_text(s_clock_layer, "00:00:00 AM");
   text_layer_set_text_alignment(s_clock_layer, GTextAlignmentCenter);
   text_layer_set_font(s_clock_layer, s_res_gothic_24_bold);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_clock_layer);
@@ -66,17 +66,15 @@ static void destroy_ui(void) {
 
 // Persistent storage key(s)
 #define PERSIST_TIMER_MODE 1
+#define PERSIST_START_TIME 2
 
 // Timer variables
 time_t start_time = 0;					    	// start time (set when timer starts)
 static int timer_initial = -(5 * 60);	// initial timer values in seconds
 static int timer_value = -(5 * 60);		// current timer values in seconds
-const int MARGIN = 2;         		  	// time margin in seconds when pressing up button
+const int MARGIN = 2;         		  	// time margin in seconds when multi-pressing up button
 static bool timer_run = false;      	// TRUE if timer is running
-// magic numbers for sync to clock minute
-const int SYNC_MIN = INT_MAX / 2;
-const int SYNC_CHK = INT_MAX / 4;
-static int timer_sync = 0;						// 0 = none, pos = fwd, neg = back, SYNC_MIN = min
+static bool timer_sync = false;				// TRUE to sync timer to nearest clock minute
 // what timer does when zero is reached
 static enum TIMER_MODE {TIMER_STOP, TIMER_ROLLING, TIMER_COUNT} timer_mode = TIMER_ROLLING;
 
@@ -84,7 +82,7 @@ static enum TIMER_MODE {TIMER_STOP, TIMER_ROLLING, TIMER_COUNT} timer_mode = TIM
 static void display_timer() {
   // Create a long-lived buffer
   static char timer_buffer[] = "00:00:00";
-  struct tm timer_time;
+	struct tm timer_time;
   
 	// set timer text & background color
 	if (timer_value > 0) {													// timer counting up
@@ -135,18 +133,17 @@ static void update_clock_timer() {
   struct tm *tick_time = localtime(&temp);
 
   // Create a long-lived buffer
-  static char clock_buffer[] = "00:00:00";
+  static char clock_buffer[] = "00:00:00 AM";
 
-  // Write the current minutes and seconds into the buffer
-  if(clock_is_24h_style() == true) {
-    //Use 24 hour format
+  // Write the current time into the buffer
+  if(clock_is_24h_style()) {				// 24 hour format
     strftime(clock_buffer, sizeof("00:00:00"), "%H:%M:%S", tick_time);
-  } else {
-    //Use 12 hour format
-    strftime(clock_buffer, sizeof("00:00:00 p.m."), "%I:%M:%S %p", tick_time);
+  } else {													// 12 hour format
+    strftime(clock_buffer, sizeof("00:00:00 AM"), "%I:%M:%S %p", tick_time);
   }
   // Display this time on the TextLayer
   text_layer_set_text(s_clock_layer, clock_buffer);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "Clock: %s", clock_buffer);
 
 	// USE START TIME IF I HAVE IT, OTHERWISE INCREMENT
 	
@@ -161,24 +158,9 @@ static void update_clock_timer() {
 	// HANDLE SYNC
 	
 	if (timer_sync) {
-		if (timer_sync > SYNC_CHK) {							// sync timer to nearest clock minute
-			int offset = timer_value % 60 - (60 - tick_time->tm_sec);
-			timer_value -= (offset <= 30) ? offset : offset - 60;
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "Double Vibe");
-			vibes_double_pulse();
-			timer_sync = 0;
-		} else if (timer_sync < 0) {							// jump timer back to minute
-			int secs = timer_value % 60;
-			int correct = ((60 - (secs % 60)) % 60) - 60;
-			timer_value += correct < -MARGIN ? correct : correct - 60 ;
-			timer_sync += 1;
-		} else if (timer_sync > 0) {							// jump timer forward to minute
-			timer_value += (60 - (timer_value % 60)) % 60;
-			if (timer_mode != TIMER_COUNT && timer_value > 0) {
-				timer_value = 0;
-			}
-			timer_sync -= 1;
-		}
+		int offset = timer_value % 60 - (60 - tick_time->tm_sec);
+		timer_value -= (offset <= 30) ? offset : offset - 60;
+		timer_sync = false;
 		start_time = 0;							// sync start time
 	} 
 	
@@ -222,6 +204,8 @@ static void update_clock_timer() {
 	
 	if (timer_run && ! start_time) {
 		start_time = temp - timer_value;
+		persist_write_int(PERSIST_START_TIME, (int32_t) start_time);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Saved Start time: %d", (int) start_time);
 	}
 }
 
@@ -230,14 +214,19 @@ static void update_clock_timer() {
 // Up click jumps back to minute
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Up click handled");
-	timer_sync -= 1;
+	int secs = timer_value % 60;
+	int correct = ((60 - (secs % 60)) % 60) - 60;
+	timer_value += correct < -MARGIN ? correct : correct - 60 ;
+  timer_sync = false;
+  display_timer();
+	start_time = 0;									// sync start time
 }
 
 // Up long click resets timer
 static void up_long_click_handler(ClickRecognizerRef recognizer, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Up long click handled");
   timer_run = false;
-  timer_sync = 0;
+  timer_sync = false;
 	timer_value = timer_initial;
   display_timer();
 	start_time = 0;									// sync start time
@@ -249,7 +238,7 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
 	if ((timer_run = ! timer_run) && timer_mode != TIMER_COUNT && timer_value >= 0) {
 		timer_value = timer_initial;
 	}
-	timer_sync = 0;
+	timer_sync = false;
 	display_timer();
 	start_time = 0;									// sync start time
 }
@@ -257,31 +246,41 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
 // Select long click syncs minute to closest clock minute
 static void select_long_click_handler(ClickRecognizerRef recognizer, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Select long click handled");
-	timer_sync = SYNC_MIN;
+	timer_sync = true;							// sync on next tick
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "Double Vibe");
+	vibes_double_pulse();
 }
 
 // Down click jumps forward to minute
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Down click handled");
-	timer_sync += 1;
+	timer_value += (60 - (timer_value % 60)) % 60;
+	if (timer_mode != TIMER_COUNT && timer_value > 0) {
+		timer_value = 0;
+	}
+  timer_sync = false;
+  display_timer();
+	start_time = 0;									// sync start time
 }
 
 // Down long click rotates timer mode
 static void down_long_click_handler(ClickRecognizerRef recognizer, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Down long click handled");
 	switch (timer_mode) {
-	case TIMER_STOP:
-		timer_mode = TIMER_ROLLING;
-		break;
 	case TIMER_ROLLING:
 		timer_mode = TIMER_COUNT;
 		break;
 	case TIMER_COUNT:
 		timer_mode = TIMER_STOP;
 		break;
+	default:
+	  APP_LOG(APP_LOG_LEVEL_DEBUG, "Timer Mode error");
+	case TIMER_STOP:
+		timer_mode = TIMER_ROLLING;
+		break;
 	}
 	display_mode();
-	persist_write_int(PERSIST_TIMER_MODE, (int32_t) timer_mode);
+	persist_write_int(PERSIST_TIMER_MODE, (int) timer_mode);
 }
 
 // INITIALIZATION
@@ -314,14 +313,42 @@ void show_timer_window(void) {
   tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
   // Register button click handlers
   window_set_click_config_provider(s_window, click_config_provider);
-	// retrieve and show timer mode
+	// retrieve timer mode and make sure it's good
 	timer_mode = persist_exists(PERSIST_TIMER_MODE) ?
 		(enum TIMER_MODE) persist_read_int(PERSIST_TIMER_MODE) :
 		TIMER_ROLLING ;
+	switch (timer_mode) {
+	case TIMER_STOP: case TIMER_ROLLING: case TIMER_COUNT:
+		break;
+	default:
+		timer_mode = TIMER_ROLLING;
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Retrieved Timer Mode fixed");
+		break;
+	}
+	// retrieve and check start time
+	start_time = persist_exists(PERSIST_START_TIME) ?
+		(int) persist_read_int(PERSIST_START_TIME) :
+		0 ;
+	{
+	  time_t temp = time(NULL); 
+		if (start_time && (start_time > temp || start_time < temp - 99 * 60 * 60)) {
+			start_time = 0;
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "Retrieved Start time fixed");
+		}
+	}
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "Retrieved Start time: %d", (int) start_time);
+	// restart if start time
+	if (start_time) {
+		timer_run = true;
+	}
 	display_timer();
 	display_mode();
 }
 
 void hide_timer_window(void) {
   window_stack_remove(s_window, true);
+	// clear start time if timer not running
+	if (! timer_run && start_time) {
+		persist_write_int(PERSIST_START_TIME, 0);
+	}
 }
