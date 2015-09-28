@@ -1,6 +1,3 @@
-// Set length of long click for emulator or phone
-#define LONG_CLICK_LENGTH 2000		// 2000 for emulator, 0 for watch
-
 #include <pebble.h>
 #include <limits.h>
 #include "timer_window.h"
@@ -15,6 +12,7 @@ static TextLayer *s_clock_layer;
 static TextLayer *s_count_layer;
 static TextLayer *s_timer_layer;
 static TextLayer *s_mode_layer;
+static TextLayer *s_start_layer;
 
 static void initialise_ui(void) {
   s_window = window_create();
@@ -27,32 +25,39 @@ static void initialise_ui(void) {
   s_res_roboto_bold_subset_49 = fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49);
   s_res_gothic_18_bold = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   // s_clock_layer
-  s_clock_layer = text_layer_create(GRect(8, 9, 130, 31));
-  text_layer_set_text(s_clock_layer, "00:00:00 AM");
+  s_clock_layer = text_layer_create(GRect(8, 0, 130, 31));
+  text_layer_set_text(s_clock_layer, " ");
   text_layer_set_text_alignment(s_clock_layer, GTextAlignmentCenter);
   text_layer_set_font(s_clock_layer, s_res_gothic_24_bold);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_clock_layer);
   
   // s_count_layer
-  s_count_layer = text_layer_create(GRect(5, 66, 134, 38));
-  text_layer_set_text(s_count_layer, "0:00:00");
+  s_count_layer = text_layer_create(GRect(5, 57, 134, 38));
+  text_layer_set_text(s_count_layer, "Text layer");
   text_layer_set_text_alignment(s_count_layer, GTextAlignmentCenter);
   text_layer_set_font(s_count_layer, s_res_gothic_28_bold);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_count_layer);
   
   // s_timer_layer
-  s_timer_layer = text_layer_create(GRect(5, 52, 135, 63));
-  text_layer_set_text(s_timer_layer, "5:00");
+  s_timer_layer = text_layer_create(GRect(5, 43, 135, 63));
+  text_layer_set_text(s_timer_layer, " ");
   text_layer_set_text_alignment(s_timer_layer, GTextAlignmentCenter);
   text_layer_set_font(s_timer_layer, s_res_roboto_bold_subset_49);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_timer_layer);
   
   // s_mode_layer
-  s_mode_layer = text_layer_create(GRect(7, 122, 131, 23));
-  text_layer_set_text(s_mode_layer, "Rolling");
+  s_mode_layer = text_layer_create(GRect(7, 118, 131, 23));
+  text_layer_set_text(s_mode_layer, " ");
   text_layer_set_text_alignment(s_mode_layer, GTextAlignmentCenter);
   text_layer_set_font(s_mode_layer, s_res_gothic_18_bold);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_mode_layer);
+  
+  // s_start_layer
+  s_start_layer = text_layer_create(GRect(7, 140, 131, 23));
+  text_layer_set_text(s_start_layer, " ");
+  text_layer_set_text_alignment(s_start_layer, GTextAlignmentCenter);
+  text_layer_set_font(s_start_layer, s_res_gothic_18_bold);
+  layer_add_child(window_get_root_layer(s_window), (Layer *)s_start_layer);
 }
 
 static void destroy_ui(void) {
@@ -61,6 +66,7 @@ static void destroy_ui(void) {
   text_layer_destroy(s_count_layer);
   text_layer_destroy(s_timer_layer);
   text_layer_destroy(s_mode_layer);
+  text_layer_destroy(s_start_layer);
 }
 // END AUTO-GENERATED UI CODE
 
@@ -71,12 +77,34 @@ static void destroy_ui(void) {
 // Timer variables
 time_t start_time = 0;					    	// start time (set when timer starts)
 static int timer_initial = -(5 * 60);	// initial timer values in seconds
-static int timer_value = -(5 * 60);		// current timer values in seconds
+static int timer_value = 0;						// current timer values in seconds
 const int MARGIN = 2;         		  	// time margin in seconds when multi-pressing up button
 static bool timer_run = false;      	// TRUE if timer is running
 static bool timer_sync = false;				// TRUE to sync timer to nearest clock minute
 // what timer does when zero is reached
-static enum TIMER_MODE {TIMER_STOP, TIMER_ROLLING, TIMER_COUNT} timer_mode = TIMER_ROLLING;
+static enum TIMER_MODE {TIMER_STOP, TIMER_ROLLING, TIMER_COUNT} timer_mode = TIMER_COUNT;
+
+// Set start time (memory and persistent)
+static void set_start_time(time_t value) {
+	start_time = value;
+	persist_write_int(PERSIST_START_TIME, (int32_t) start_time);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Start time set to %d", (int) start_time);
+	
+  // Display start time
+	if (start_time) {
+	  // Create a long-lived buffer
+  	static char start_buffer[] = "Start: 00:00:00 AM";
+		struct tm *start_time_tm = localtime(&start_time);
+		if(clock_is_24h_style()) {				// 24 hour format
+			strftime(start_buffer, sizeof("Start: 00:00:00"), "Start: %H:%M:%S", start_time_tm);
+		} else {													// 12 hour format
+			strftime(start_buffer, sizeof("Start: 00:00:00 AM"), "Start: %l:%M:%S %p", start_time_tm);
+		}
+	  text_layer_set_text(s_start_layer, start_buffer);
+	} else {
+		text_layer_set_text(s_start_layer, "");
+	}
+}
 
 // Display timer value
 static void display_timer() {
@@ -113,13 +141,13 @@ static void display_timer() {
 static void display_mode() {
 	switch (timer_mode) {
 	case TIMER_STOP:
-		text_layer_set_text(s_mode_layer, "Down-Stop");
+		text_layer_set_text(s_mode_layer, "DOWN-STOP");
 		break;
 	case TIMER_ROLLING:
-		text_layer_set_text(s_mode_layer, "Rolling");
+		text_layer_set_text(s_mode_layer, "ROLLING");
 		break;
 	case TIMER_COUNT:
-		text_layer_set_text(s_mode_layer, "Down-Up");
+		text_layer_set_text(s_mode_layer, "DOWN-UP");
 		break;
 	}
 }
@@ -139,7 +167,7 @@ static void update_clock_timer() {
   if(clock_is_24h_style()) {				// 24 hour format
     strftime(clock_buffer, sizeof("00:00:00"), "%H:%M:%S", tick_time);
   } else {													// 12 hour format
-    strftime(clock_buffer, sizeof("00:00:00 AM"), "%I:%M:%S %p", tick_time);
+    strftime(clock_buffer, sizeof("00:00:00 AM"), "%l:%M:%S %p", tick_time);
   }
   // Display this time on the TextLayer
   text_layer_set_text(s_clock_layer, clock_buffer);
@@ -161,7 +189,7 @@ static void update_clock_timer() {
 		int offset = timer_value % 60 - (60 - tick_time->tm_sec);
 		timer_value -= (offset <= 30) ? offset : offset - 60;
 		timer_sync = false;
-		start_time = 0;							// sync start time
+		set_start_time(0);					// sync start time
 	} 
 	
 	// UPDATE TIMER
@@ -191,7 +219,7 @@ static void update_clock_timer() {
 				break;
 			case TIMER_ROLLING:				// ROLLING starts
 				timer_value = timer_initial;
-				start_time -= timer_initial;
+				set_start_time(start_time - timer_initial);
 				break;
 			case TIMER_COUNT:					// count down then count UP
 				break;
@@ -203,9 +231,7 @@ static void update_clock_timer() {
 	// CAPTURE START TIME
 	
 	if (timer_run && ! start_time) {
-		start_time = temp - timer_value;
-		persist_write_int(PERSIST_START_TIME, (int32_t) start_time);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Saved Start time: %d", (int) start_time);
+		set_start_time(temp - timer_value);
 	}
 }
 
@@ -219,7 +245,7 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
 	timer_value += correct < -MARGIN ? correct : correct - 60 ;
   timer_sync = false;
   display_timer();
-	start_time = 0;									// sync start time
+	set_start_time(0);							// sync start time
 }
 
 // Up long click resets timer
@@ -229,7 +255,7 @@ static void up_long_click_handler(ClickRecognizerRef recognizer, void *context) 
   timer_sync = false;
 	timer_value = timer_initial;
   display_timer();
-	start_time = 0;									// sync start time
+	set_start_time(0);							// sync start time
 }
 
 // Select click toggles start/stop
@@ -240,7 +266,7 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
 	}
 	timer_sync = false;
 	display_timer();
-	start_time = 0;									// sync start time
+	set_start_time(0);							// sync start time
 }
 
 // Select long click syncs minute to closest clock minute
@@ -260,7 +286,7 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 	}
   timer_sync = false;
   display_timer();
-	start_time = 0;									// sync start time
+	set_start_time(0);							// sync start time
 }
 
 // Down long click rotates timer mode
@@ -286,13 +312,16 @@ static void down_long_click_handler(ClickRecognizerRef recognizer, void *context
 // INITIALIZATION
 
 static void click_config_provider(void *context) {
+	// Basalt emulator needs much longer time for long click than default
+	WatchInfoModel watch_info = watch_info_get_model();
+	int long_click_length = WATCH_INFO_MODEL_QEMU_BASALT == watch_info ? 2000 : 0 ;
   // Register the ClickHandlers
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
-  window_long_click_subscribe(BUTTON_ID_UP, LONG_CLICK_LENGTH, up_long_click_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_UP, long_click_length, up_long_click_handler, NULL);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
-  window_long_click_subscribe(BUTTON_ID_SELECT, LONG_CLICK_LENGTH, select_long_click_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_SELECT, long_click_length, select_long_click_handler, NULL);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
-  window_long_click_subscribe(BUTTON_ID_DOWN, LONG_CLICK_LENGTH, down_long_click_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_DOWN, long_click_length, down_long_click_handler, NULL);
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
@@ -325,24 +354,29 @@ void show_timer_window(void) {
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "Retrieved Timer Mode fixed");
 		break;
 	}
+	// display mode
+	display_mode();
 	// retrieve and check start time
-	start_time = persist_exists(PERSIST_START_TIME) ?
-		(int) persist_read_int(PERSIST_START_TIME) :
-		0 ;
 	{
-	  time_t temp = time(NULL); 
-		if (start_time && (start_time > temp || start_time < temp - 99 * 60 * 60)) {
-			start_time = 0;
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "Retrieved Start time fixed");
+	  time_t now = time(NULL); 		// current time
+		time_t chk_time = persist_exists(PERSIST_START_TIME) ?
+			(int) persist_read_int(PERSIST_START_TIME) :
+			0 ;
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Retrieved Start time: %d", (int) chk_time);
+		if (chk_time && (chk_time > now + 99 * 60 * 60 || chk_time < now - 99 * 60 * 60)) {
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "Retrieved Start time error: %d", (int) chk_time);
+			set_start_time(0);
+		} else {
+			set_start_time(chk_time);
 		}
 	}
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Retrieved Start time: %d", (int) start_time);
-	// restart if start time
+	// run if start time
 	if (start_time) {
 		timer_run = true;
+	} else {
+		timer_value = timer_initial;
+		display_timer();
 	}
-	display_timer();
-	display_mode();
 }
 
 void hide_timer_window(void) {
