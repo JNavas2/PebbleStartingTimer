@@ -89,6 +89,11 @@ static void set_start_time(time_t value) {
 	start_time = value;
 	persist_write_int(PERSIST_START_TIME, (int32_t) start_time);
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Start time set to %d", (int) start_time);
+	wakeup_cancel_all();								// cancel any pending wakeups
+	if (start_time) {										// wakeup for 10 second countdown
+		WakeupId id = wakeup_schedule(start_time - 10, 0, false);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "WakeupId: %d", (int) id);
+	}
 	
   // Display start time
 	if (start_time) {
@@ -408,12 +413,13 @@ void show_timer_window(void) {
 		timer_value = timer_initial;
 		display_timer();
 	}
+	// app running, so cancel any pending wakeups
+	wakeup_cancel_all();
 }
 
 void hide_timer_window(void) {
   window_stack_remove(s_window, true);
-	// clear start time if timer not running
-	if (! timer_run && start_time) {
-		persist_write_int(PERSIST_START_TIME, 0);
+	if (! timer_run) {														// if timer not running
+		persist_write_int(PERSIST_START_TIME, 0);		// then clear any start time
 	}
 }
