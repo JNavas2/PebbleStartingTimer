@@ -157,8 +157,8 @@ static void update_clock_timer() {
 	// UPDATE CLOCK
 	
 	// Get a tm structure
-  time_t temp = time(NULL); 
-  struct tm *tick_time = localtime(&temp);
+  time_t clock = time(NULL); 
+  struct tm *tick_time = localtime(&clock);
 
   // Create a long-lived buffer
   static char clock_buffer[] = "00:00:00 AM";
@@ -171,13 +171,12 @@ static void update_clock_timer() {
   }
   // Display this time on the TextLayer
   text_layer_set_text(s_clock_layer, clock_buffer);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Clock: %s", clock_buffer);
 
 	// USE START TIME IF I HAVE IT, OTHERWISE INCREMENT
 	
 	if (timer_run) {
 		if (start_time) {
-			timer_value = temp - start_time;
+			timer_value = clock - start_time;
 		} else {
 			++timer_value;
 		}	
@@ -186,8 +185,13 @@ static void update_clock_timer() {
 	// HANDLE SYNC
 	
 	if (timer_sync) {
-		int offset = timer_value % 60 - (60 - tick_time->tm_sec);
-		timer_value -= (offset <= 30) ? offset : offset - 60;
+		int delta = ((clock - timer_value) % 60);	// extract secs from start time
+		if (delta >= 30) {												// delta to nearest minute
+			delta -= 60;
+		}
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Sync timer_value:%d delta:%d", (int) timer_value, (int) delta);
+		timer_value += delta;
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "New timer_value:%d", (int) timer_value);
 		timer_sync = false;
 		set_start_time(0);					// sync start time
 	} 
@@ -197,17 +201,18 @@ static void update_clock_timer() {
   if (timer_run) {
 		// VIBES
 		switch (timer_value) {			// vibration test
-			case -4 * 60:
-			case -10: case -9: case -8: case -7: case -6: case -5: case -4: case -3: case -2: case -1: 
+		default:
+			if (timer_value != timer_initial + 60) {	// if one minute elapsed from initial_time
+				break;
+			}																					// then fall through into short vibe
+		case -10: case -9: case -8: case -7: case -6: case -5: case -4: case -3: case -2: case -1: 
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "Short Vibe");
 			vibes_short_pulse();
 			break;
-			case -1 * 60:
-			case 0:
+		case -1 * 60:
+		case 0:
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "Long Vibe");
 			vibes_long_pulse();
-			break;
-			default:
 			break;
 		}
 		// LOGIC
@@ -231,7 +236,7 @@ static void update_clock_timer() {
 	// CAPTURE START TIME
 	
 	if (timer_run && ! start_time) {
-		set_start_time(temp - timer_value);
+		set_start_time(clock - timer_value);
 	}
 }
 
@@ -248,9 +253,16 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
 	set_start_time(0);							// sync start time
 }
 
-// Up long click resets timer
+// Up long click, resets timer and inital-value
 static void up_long_click_handler(ClickRecognizerRef recognizer, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Up long click handled");
+	// change timer_initial if timer already stopped with seconds at 0
+	if (! timer_run && 0 == timer_value % 60) {
+		timer_initial = timer_value;
+	  APP_LOG(APP_LOG_LEVEL_DEBUG, "timer_initial now %d minutes", -timer_initial / 60); 
+		vibes_double_pulse();
+	}
+	// reset timer
   timer_run = false;
   timer_sync = false;
 	timer_value = timer_initial;
@@ -266,7 +278,9 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
 	}
 	timer_sync = false;
 	display_timer();
-	set_start_time(0);							// sync start time
+	if (timer_run) {
+		set_start_time(0);						// sync start time
+	}
 }
 
 // Select long click syncs minute to closest clock minute
@@ -280,8 +294,10 @@ static void select_long_click_handler(ClickRecognizerRef recognizer, void *conte
 // Down click jumps forward to minute
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Down click handled");
-	timer_value += (60 - (timer_value % 60)) % 60;
-	if (timer_mode != TIMER_COUNT && timer_value > 0) {
+	int correct = (60 - (timer_value % 60)) % 60;
+	timer_value += correct ? correct : 60 ;
+	// only allow positive time (after start) for TIMER_COUNT
+	if (TIMER_COUNT != timer_mode && timer_value > 0) {
 		timer_value = 0;
 	}
   timer_sync = false;
@@ -305,6 +321,13 @@ static void down_long_click_handler(ClickRecognizerRef recognizer, void *context
 		timer_mode = TIMER_ROLLING;
 		break;
 	}
+	// only allow positive time (after start) for TIMER_COUNT
+	if (TIMER_COUNT != timer_mode && timer_value > 0) {	
+		timer_value = 0;
+		timer_sync = false;
+		display_timer();
+		set_start_time(0);							// sync start time
+	}
 	display_mode();
 	persist_write_int(PERSIST_TIMER_MODE, (int) timer_mode);
 }
@@ -313,8 +336,16 @@ static void down_long_click_handler(ClickRecognizerRef recognizer, void *context
 
 static void click_config_provider(void *context) {
 	// Basalt emulator needs much longer time for long click than default
-	WatchInfoModel watch_info = watch_info_get_model();
-	int long_click_length = WATCH_INFO_MODEL_QEMU_BASALT == watch_info ? 2000 : 0 ;
+	int long_click_length;
+	switch (watch_info_get_model()) {
+	case WATCH_INFO_MODEL_UNKNOWN:
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Unknown watch model");
+		long_click_length = 2000;
+	default:
+		long_click_length = 0;
+		break;
+	}
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "long_click_length: %d", long_click_length);
   // Register the ClickHandlers
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
   window_long_click_subscribe(BUTTON_ID_UP, long_click_length, up_long_click_handler, NULL);
