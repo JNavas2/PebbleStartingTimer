@@ -2,11 +2,14 @@
 #include <limits.h>
 #include "timer_window.h"
 
+// Platform compatibility
+static GColor MyYellow, MyOrange, MyGreen;
+
 // BEGIN AUTO-GENERATED UI CODE; DO NOT MODIFY
 static Window *s_window;
 static GFont s_res_gothic_24_bold;
 static GFont s_res_gothic_28_bold;
-static GFont s_res_roboto_bold_subset_49;
+static GFont s_res_font_google_roboto_bold_webfont_48;
 static GFont s_res_gothic_18_bold;
 static TextLayer *s_clock_layer;
 static TextLayer *s_count_layer;
@@ -22,7 +25,7 @@ static void initialise_ui(void) {
   
   s_res_gothic_24_bold = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   s_res_gothic_28_bold = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-  s_res_roboto_bold_subset_49 = fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49);
+  s_res_font_google_roboto_bold_webfont_48 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_GOOGLE_ROBOTO_BOLD_WEBFONT_48));
   s_res_gothic_18_bold = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   // s_clock_layer
   s_clock_layer = text_layer_create(GRect(8, 0, 130, 31));
@@ -42,7 +45,7 @@ static void initialise_ui(void) {
   s_timer_layer = text_layer_create(GRect(5, 43, 135, 63));
   text_layer_set_text(s_timer_layer, " ");
   text_layer_set_text_alignment(s_timer_layer, GTextAlignmentCenter);
-  text_layer_set_font(s_timer_layer, s_res_roboto_bold_subset_49);
+  text_layer_set_font(s_timer_layer, s_res_font_google_roboto_bold_webfont_48);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_timer_layer);
   
   // s_mode_layer
@@ -67,6 +70,7 @@ static void destroy_ui(void) {
   text_layer_destroy(s_timer_layer);
   text_layer_destroy(s_mode_layer);
   text_layer_destroy(s_start_layer);
+  fonts_unload_custom_font(s_res_font_google_roboto_bold_webfont_48);
 }
 // END AUTO-GENERATED UI CODE
 
@@ -125,7 +129,7 @@ static void display_timer() {
 		timer_time.tm_sec = timer_value % 60;
 		strftime(timer_buffer, sizeof("00:00:00"), "%k:%M:%S", &timer_time);
 	  text_layer_set_text(s_count_layer, timer_buffer);		// timer text
-		text_layer_set_background_color(s_count_layer, timer_run ? GColorGreen : GColorWhite);
+		text_layer_set_background_color(s_count_layer, timer_run ? MyGreen : GColorWhite);
 		layer_set_hidden((Layer*)s_count_layer, false);
 		layer_set_hidden((Layer*)s_timer_layer, true);
 	} else {																				// timer counting down
@@ -135,7 +139,7 @@ static void display_timer() {
 		strftime(timer_buffer, sizeof("00:00"), "%k:%M", &timer_time);
 	  text_layer_set_text(s_timer_layer, timer_buffer);	// timer text
 		text_layer_set_background_color(s_timer_layer, timer_run ?
-			(timer_value < (-1 * 60) ? GColorYellow : GColorOrange) :
+			(timer_value < (-1 * 60) ? MyYellow : MyOrange) :
 			GColorWhite);
 		layer_set_hidden((Layer*)s_count_layer, true);
 		layer_set_hidden((Layer*)s_timer_layer, false);
@@ -346,12 +350,17 @@ static void click_config_provider(void *context) {
 	case WATCH_INFO_MODEL_UNKNOWN:
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "Unknown watch model");
 		long_click_length = 2000;
+		break;
 	default:
 		long_click_length = 0;
 		break;
 	}
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "long_click_length: %d", long_click_length);
-  // Register the ClickHandlers
+	// Platform compatibility
+	MyYellow =	COLOR_FALLBACK(GColorYellow,	GColorWhite);
+	MyOrange =	COLOR_FALLBACK(GColorOrange,	GColorWhite);
+	MyGreen =		COLOR_FALLBACK(GColorGreen,		GColorWhite);
+	// Register the ClickHandlers
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
   window_long_click_subscribe(BUTTON_ID_UP, long_click_length, up_long_click_handler, NULL);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
@@ -370,7 +379,11 @@ static void handle_window_unload(Window* window) {
 
 void show_timer_window(void) {
   initialise_ui();
-  window_set_window_handlers(s_window, (WindowHandlers) {
+#ifdef PBL_PLATFORM_APLITE
+	window_set_fullscreen(s_window, true);									// full screen on SDK 2
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "Set to fullscreen");
+#endif
+	window_set_window_handlers(s_window, (WindowHandlers) {
     .unload = handle_window_unload,
   });
   window_stack_push(s_window, true);

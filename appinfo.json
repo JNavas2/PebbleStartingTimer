@@ -4,28 +4,32 @@
         ""
     ],
     "companyName": "John Navas",
-    "longName": "Starting Timer for Yacht Racing",
+    "longName": "Start Timer Sail Racing",
     "projectType": "native",
     "resources": {
         "media": [
             {
-                "file": "images/Yacht-Racing-Start-Timer-Icon-28.png",
+                "file": "images/Yacht-Racing-Start-Timer-Icon.png",
                 "menuIcon": true,
                 "name": "APP_ICON_28",
-                "targetPlatforms": [
-                    "basalt"
-                ],
                 "type": "png"
+            },
+            {
+                "characterRegex": "[0-9:. ]",
+                "file": "fonts/Roboto-Bold-webfont.ttf",
+                "name": "FONT_GOOGLE_ROBOTO_BOLD_WEBFONT_48",
+                "type": "font"
             }
         ]
     },
     "sdkVersion": "3",
-    "shortName": "StartingTimer",
+    "shortName": "Start Timer",
     "targetPlatforms": [
+        "aplite",
         "basalt"
     ],
     "uuid": "45b5631f-f23f-4462-b5e3-dd61664a3a06",
-    "versionLabel": "1.0",
+    "versionLabel": "1.1",
     "watchapp": {
         "watchface": false
     }
