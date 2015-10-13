@@ -7,15 +7,15 @@ static GColor MyYellow, MyOrange, MyGreen;
 
 // BEGIN AUTO-GENERATED UI CODE; DO NOT MODIFY
 static Window *s_window;
-static GFont s_res_gothic_24_bold;
 static GFont s_res_gothic_28_bold;
-static GFont s_res_font_google_roboto_bold_webfont_48;
-static GFont s_res_gothic_18_bold;
+static GFont s_res_gothic_24_bold;
+static GFont s_res_font_roboto_bold_54;
+static GFont s_res_font_robotocondensed_bold_37;
 static TextLayer *s_clock_layer;
-static TextLayer *s_count_layer;
-static TextLayer *s_timer_layer;
-static TextLayer *s_mode_layer;
 static TextLayer *s_start_layer;
+static TextLayer *s_mode_layer;
+static TextLayer *s_timer_layer;
+static TextLayer *s_count_layer;
 
 static void initialise_ui(void) {
   s_window = window_create();
@@ -23,54 +23,55 @@ static void initialise_ui(void) {
     window_set_fullscreen(s_window, 0);
   #endif
   
-  s_res_gothic_24_bold = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   s_res_gothic_28_bold = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-  s_res_font_google_roboto_bold_webfont_48 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_GOOGLE_ROBOTO_BOLD_WEBFONT_48));
-  s_res_gothic_18_bold = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+  s_res_gothic_24_bold = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
+  s_res_font_roboto_bold_54 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ROBOTO_BOLD_54));
+  s_res_font_robotocondensed_bold_37 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ROBOTOCONDENSED_BOLD_37));
   // s_clock_layer
   s_clock_layer = text_layer_create(GRect(8, 0, 130, 31));
-  text_layer_set_text(s_clock_layer, " ");
+  text_layer_set_text(s_clock_layer, " 00:00:00");
   text_layer_set_text_alignment(s_clock_layer, GTextAlignmentCenter);
-  text_layer_set_font(s_clock_layer, s_res_gothic_24_bold);
+  text_layer_set_font(s_clock_layer, s_res_gothic_28_bold);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_clock_layer);
   
-  // s_count_layer
-  s_count_layer = text_layer_create(GRect(5, 57, 134, 38));
-  text_layer_set_text(s_count_layer, "Text layer");
-  text_layer_set_text_alignment(s_count_layer, GTextAlignmentCenter);
-  text_layer_set_font(s_count_layer, s_res_gothic_28_bold);
-  layer_add_child(window_get_root_layer(s_window), (Layer *)s_count_layer);
-  
-  // s_timer_layer
-  s_timer_layer = text_layer_create(GRect(5, 43, 135, 63));
-  text_layer_set_text(s_timer_layer, " ");
-  text_layer_set_text_alignment(s_timer_layer, GTextAlignmentCenter);
-  text_layer_set_font(s_timer_layer, s_res_font_google_roboto_bold_webfont_48);
-  layer_add_child(window_get_root_layer(s_window), (Layer *)s_timer_layer);
+  // s_start_layer
+  s_start_layer = text_layer_create(GRect(2, 129, 140, 28));
+  text_layer_set_text(s_start_layer, "Start 00:00:00 AM");
+  text_layer_set_text_alignment(s_start_layer, GTextAlignmentCenter);
+  text_layer_set_font(s_start_layer, s_res_gothic_24_bold);
+  layer_add_child(window_get_root_layer(s_window), (Layer *)s_start_layer);
   
   // s_mode_layer
-  s_mode_layer = text_layer_create(GRect(7, 118, 131, 23));
-  text_layer_set_text(s_mode_layer, " ");
+  s_mode_layer = text_layer_create(GRect(8, 101, 130, 32));
+  text_layer_set_text(s_mode_layer, " DOWN-UP");
   text_layer_set_text_alignment(s_mode_layer, GTextAlignmentCenter);
-  text_layer_set_font(s_mode_layer, s_res_gothic_18_bold);
+  text_layer_set_font(s_mode_layer, s_res_gothic_28_bold);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_mode_layer);
   
-  // s_start_layer
-  s_start_layer = text_layer_create(GRect(7, 140, 131, 23));
-  text_layer_set_text(s_start_layer, " ");
-  text_layer_set_text_alignment(s_start_layer, GTextAlignmentCenter);
-  text_layer_set_font(s_start_layer, s_res_gothic_18_bold);
-  layer_add_child(window_get_root_layer(s_window), (Layer *)s_start_layer);
+  // s_timer_layer
+  s_timer_layer = text_layer_create(GRect(1, 36, 142, 70));
+  text_layer_set_text(s_timer_layer, "Text layer");
+  text_layer_set_text_alignment(s_timer_layer, GTextAlignmentCenter);
+  text_layer_set_font(s_timer_layer, s_res_font_roboto_bold_54);
+  layer_add_child(window_get_root_layer(s_window), (Layer *)s_timer_layer);
+  
+  // s_count_layer
+  s_count_layer = text_layer_create(GRect(2, 49, 141, 46));
+  text_layer_set_text(s_count_layer, "00:00:00");
+  text_layer_set_text_alignment(s_count_layer, GTextAlignmentCenter);
+  text_layer_set_font(s_count_layer, s_res_font_robotocondensed_bold_37);
+  layer_add_child(window_get_root_layer(s_window), (Layer *)s_count_layer);
 }
 
 static void destroy_ui(void) {
   window_destroy(s_window);
   text_layer_destroy(s_clock_layer);
-  text_layer_destroy(s_count_layer);
-  text_layer_destroy(s_timer_layer);
-  text_layer_destroy(s_mode_layer);
   text_layer_destroy(s_start_layer);
-  fonts_unload_custom_font(s_res_font_google_roboto_bold_webfont_48);
+  text_layer_destroy(s_mode_layer);
+  text_layer_destroy(s_timer_layer);
+  text_layer_destroy(s_count_layer);
+  fonts_unload_custom_font(s_res_font_roboto_bold_54);
+  fonts_unload_custom_font(s_res_font_robotocondensed_bold_37);
 }
 // END AUTO-GENERATED UI CODE
 
@@ -102,12 +103,12 @@ static void set_start_time(time_t value) {
   // Display start time
 	if (start_time) {
 	  // Create a long-lived buffer
-  	static char start_buffer[] = "Start: 00:00:00 AM";
+  	static char start_buffer[] = "Start 00:00:00 AM";
 		struct tm *start_time_tm = localtime(&start_time);
 		if(clock_is_24h_style()) {				// 24 hour format
-			strftime(start_buffer, sizeof("Start: 00:00:00"), "Start: %H:%M:%S", start_time_tm);
+			strftime(start_buffer, sizeof("Start 00:00:00"), "Start %H:%M:%S", start_time_tm);
 		} else {													// 12 hour format
-			strftime(start_buffer, sizeof("Start: 00:00:00 AM"), "Start: %l:%M:%S %p", start_time_tm);
+			strftime(start_buffer, sizeof("Start 00:00:00 AM"), "Start %l:%M:%S %p", start_time_tm);
 		}
 	  text_layer_set_text(s_start_layer, start_buffer);
 	} else {

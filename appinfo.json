@@ -9,16 +9,22 @@
     "resources": {
         "media": [
             {
+                "characterRegex": "[0-9:. ]",
+                "file": "fonts/RobotoCondensed-Bold-37.ttf",
+                "name": "FONT_ROBOTOCONDENSED_BOLD_37",
+                "type": "font"
+            },
+            {
+                "characterRegex": "[0-9:. ]",
+                "file": "fonts/Roboto-Bold-webfont-54.ttf",
+                "name": "FONT_ROBOTO_BOLD_54",
+                "type": "font"
+            },
+            {
                 "file": "images/Yacht-Racing-Start-Timer-Icon.png",
                 "menuIcon": true,
                 "name": "APP_ICON_28",
                 "type": "png"
-            },
-            {
-                "characterRegex": "[0-9:. ]",
-                "file": "fonts/Roboto-Bold-webfont.ttf",
-                "name": "FONT_GOOGLE_ROBOTO_BOLD_WEBFONT_48",
-                "type": "font"
             }
         ]
     },
@@ -29,7 +35,7 @@
         "basalt"
     ],
     "uuid": "45b5631f-f23f-4462-b5e3-dd61664a3a06",
-    "versionLabel": "1.1",
+    "versionLabel": "1.2",
     "watchapp": {
         "watchface": false
     }
