@@ -3,7 +3,7 @@
 #include "timer_window.h"
 
 // Platform compatibility
-static GColor MyYellow, MyOrange, MyGreen;
+static GColor MyYellow, MyOrange, MyGreen;					// set to white on Aplite
 
 // BEGIN AUTO-GENERATED UI CODE; DO NOT MODIFY
 static Window *s_window;
@@ -139,9 +139,23 @@ static void display_timer() {
 		timer_time.tm_min = -timer_value % 60;
 		strftime(timer_buffer, sizeof("00:00"), "%k:%M", &timer_time);
 	  text_layer_set_text(s_timer_layer, timer_buffer);	// timer text
-		text_layer_set_background_color(s_timer_layer, timer_run ?
-			(timer_value < (-1 * 60) ? MyYellow : MyOrange) :
-			GColorWhite);
+		if (timer_run) {
+			if (timer_value < (-1 * 60)) {
+				text_layer_set_background_color(s_timer_layer, MyYellow);
+				text_layer_set_text_color(s_timer_layer, GColorBlack);
+			} else {
+#ifdef PBL_PLATFORM_APLITE
+				text_layer_set_background_color(s_timer_layer, GColorBlack);
+				text_layer_set_text_color(s_timer_layer, GColorWhite);
+#else
+				text_layer_set_background_color(s_timer_layer, MyOrange);
+				text_layer_set_text_color(s_timer_layer, GColorBlack);
+#endif
+			}
+		} else {
+			text_layer_set_background_color(s_timer_layer, GColorWhite);
+			text_layer_set_text_color(s_timer_layer, GColorBlack);
+		}
 		layer_set_hidden((Layer*)s_count_layer, true);
 		layer_set_hidden((Layer*)s_timer_layer, false);
 	}
