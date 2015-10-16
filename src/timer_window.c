@@ -28,7 +28,7 @@ static void initialise_ui(void) {
   s_res_font_roboto_bold_54 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ROBOTO_BOLD_54));
   s_res_font_robotocondensed_bold_37 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ROBOTOCONDENSED_BOLD_37));
   // s_clock_layer
-  s_clock_layer = text_layer_create(GRect(8, 0, 130, 31));
+  s_clock_layer = text_layer_create(GRect(3, 0, 138, 34));
   text_layer_set_text(s_clock_layer, " 00:00:00");
   text_layer_set_text_alignment(s_clock_layer, GTextAlignmentCenter);
   text_layer_set_font(s_clock_layer, s_res_gothic_28_bold);
@@ -49,14 +49,14 @@ static void initialise_ui(void) {
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_mode_layer);
   
   // s_timer_layer
-  s_timer_layer = text_layer_create(GRect(1, 36, 142, 70));
+  s_timer_layer = text_layer_create(GRect(1, 35, 142, 70));
   text_layer_set_text(s_timer_layer, "Text layer");
   text_layer_set_text_alignment(s_timer_layer, GTextAlignmentCenter);
   text_layer_set_font(s_timer_layer, s_res_font_roboto_bold_54);
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_timer_layer);
   
   // s_count_layer
-  s_count_layer = text_layer_create(GRect(2, 49, 141, 46));
+  s_count_layer = text_layer_create(GRect(2, 46, 141, 48));
   text_layer_set_text(s_count_layer, "00:00:00");
   text_layer_set_text_alignment(s_count_layer, GTextAlignmentCenter);
   text_layer_set_font(s_count_layer, s_res_font_robotocondensed_bold_37);
